@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teleop-on-serverrack
+  namespace: ros
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: teleop-svr
+  template:
+    metadata:
+      labels:
+        app: teleop-svr
+    spec:
+      # 서버랙(컨트롤플레인) 고정이 필요하면 라벨/affinity 사용 (옵션)
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      volumes:
+        - name: cyclonedds
+          configMap:
+            name: cyclonedds-config
+            items:
+              - key: cyclonedds.xml
+                path: cyclonedds.xml
+      containers:
+        - name: teleop
+          image: ketidevit2/ros-humble:1.0.1
+          imagePullPolicy: Never
+          stdin: true
+          tty: true
+          env:
+            - name: ROS_DOMAIN_ID
+              value: "30"
+            - name: RMW_IMPLEMENTATION
+              value: rmw_cyclonedds_cpp
+            - name: ROS_LOCALHOST_ONLY
+              value: "0"      # 다른 호스트(터틀봇)와 통신해야 하므로 0
+            - name: CYCLONEDDS_URI
+              value: file:///etc/ros2/cyclonedds.xml
+          volumeMounts:
+            - name: cyclonedds
+              mountPath: /etc/ros2/cyclonedds.xml
+              subPath: cyclonedds.xml
+          command: ["/bin/bash","-lc"]
+          args:
+            - |
+              source /opt/ros/humble/setup.bash
+              # 여기선 대기. exec -it로 들어가 teleop 실행
+              tail -f /dev/null
+
