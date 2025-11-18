@@ -1,2 +1,2 @@
 # Large binaries not needed in repo
-k3s/docker_images/
+scripts/etri-setup/k3s/docker_images/

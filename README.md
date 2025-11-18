@@ -22,31 +22,40 @@
 ## 🗂️ 1. 리포지터리 구조
 
 ```text
-SDI-Orchestration/
-├── MALE-Advisor/             # MALE 기반 Advisor 파일    
-│   └── MALE-Advisor-deploy.yaml   # Policy Engine Deployemnt
-├── MALE-Profiler/           # MALE 기반 Profiler 파일     
-│   └── MALE-Profiler-deploy.yaml  # Analysis Engine Deployemnt
-├── Metric-Collector/            # 메트릭 수집 · 적재 스택 매니페스트
-│   └── Metric-Collector-deploy.yaml  # 메트릭콜렉터 필요 모듈 및 · InfluxDB 포함     
-├── Mission/                      # 미션 yaml
-│   ├── fastapi_image_server.yaml # show yolo image server
-│   ├── yolo-backbone-move.yaml   # yolo backbnone-layer Deployment
-│   └── yolo-neck-head.yaml       # yolo neck&head layer Deploymen
-├── SDI-Scheduler/   # SDI스케줄러  배포 파일             
-│   ├── SDI-Scheduler-deploy.yaml # SDI‑Scheduler Deployment · RBAC
-│   └── test-SDI-Scheduler.yaml # 스케줄러 동작 검증용 워크로드   
-└── README.md      # 현재 문서                
+SDI-Edge-Cluster/
+├── deploy/                      # Kubernetes 배포 매니페스트
+│   ├── advisor/                 # MALE 기반 Advisor 배포 파일
+│   │   └── MALE-Advisor-deploy.yaml
+│   ├── profiler/                # MALE 기반 Profiler 배포 파일
+│   │   └── MALE-Profiler-deploy.yaml
+│   ├── metric-collector/        # 메트릭 수집 · 적재 스택 매니페스트
+│   │   └── Metric-Collector-deploy.yaml
+│   └── scheduler/               # SDI 스케줄러 배포 파일
+│       ├── SDI-Scheduler-deploy.yaml
+│       └── test-SDI-Scheduler.yaml
+├── workloads/                   # 워크로드 예제
+│   └── mission/                 # 미션 워크로드
+│       ├── fastapi_image_server.yaml
+│       ├── yolo-backbone-move.yaml
+│       └── yolo-neck-head.yaml
+├── src/                         # 소스 코드
+│   └── yolo/                    # YOLO 모델 레이어 분할 및 컨테이너화 코드
+├── scripts/                     # 유틸리티 스크립트
+│   └── etri-setup/              # ETRI 환경 설정 스크립트
+│       ├── k3s/                 # K3s 클러스터 설치 스크립트
+│       └── network/             # 네트워크 설정 스크립트
+├── docs/                        # 문서
+└── README.md                    # 현재 문서
 
 ```
 
 | 경로                                      | 설명                                                                                                               |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **MALE-Advisor/MALE-Advisor-deploy.yaml**              | **policy‑engine**  Deployment 를 정의한다.                                                       |
-| **MALE-Profiler/MALE Profiler-deploy.yaml**              | **analysis‑engine**  Deployment 를 정의한다.                                                       |
-| **Metric-Collector/Metric-Collector-deploy.yaml**      | metric-collector + InfluxDB + metrics‑ingester Deployment 및 관련 Secret·Service 를 일괄 정의한다.                         |
-| **SDI-Scheduler/sdi‑scheduler‑deploy.yaml** | ServiceAccount·ClusterRole·Binding + Deployment 로 구성된 **SDI Scheduler** 매니페스트다. 터틀봇 배터리 및 위치정보를 기반하여 스케줄링을 진행한다. |
-| **SDI-Scheduler/test-SDI-Scheduler.yaml**   | `schedulerName: SDI-Scheduler` 스케줄러 동작 여부를 즉시 확인할 수 있는 간단한 워크로드 이다.                                              |
+| **deploy/advisor/MALE-Advisor-deploy.yaml**              | **policy‑engine**  Deployment 를 정의한다.                                                       |
+| **deploy/profiler/MALE-Profiler-deploy.yaml**              | **analysis‑engine**  Deployment 를 정의한다.                                                       |
+| **deploy/metric-collector/Metric-Collector-deploy.yaml**      | metric-collector + InfluxDB + metrics‑ingester Deployment 및 관련 Secret·Service 를 일괄 정의한다.                         |
+| **deploy/scheduler/SDI-Scheduler-deploy.yaml** | ServiceAccount·ClusterRole·Binding + Deployment 로 구성된 **SDI Scheduler** 매니페스트다. 터틀봇 배터리 및 위치정보를 기반하여 스케줄링을 진행한다. |
+| **deploy/scheduler/test-SDI-Scheduler.yaml**   | `schedulerName: SDI-Scheduler` 스케줄러 동작 여부를 즉시 확인할 수 있는 간단한 워크로드 이다.                                              |
 
 ---
 
@@ -112,9 +121,9 @@ cp /etc/rancher/k3s/k3s.yaml ~/.kube/config  # k9s에서 k3s 클러스터 조회
 
 ```bash
 git clone https://github.com/sungmin306/SDI-Orchestration.git
-cd SDI-Orchestration/Metric-Collector/
+cd SDI-Orchestration/deploy/metric-collector/
 
-# 주석 “직접 설정” 적힌 부분(12·13·21·22행) id,pw 설정
+# 주석 "직접 설정" 적힌 부분(12·13·21·22행) id,pw 설정
 vi Metric-Collector-deploy.yaml
 ```
 
@@ -149,8 +158,8 @@ kubectl get pods -n tbot-monitoring # 또는 k9s
 #### 배포 파일 수정
 
 ```bash
-cd ../SDI-Scheduler
-vi SDI-Scheduler-deploy.yaml  # 43행 주석에“직접 설정” 적혀있는 부분에 복사한 토큰 값 넣기
+cd ../scheduler
+vi SDI-Scheduler-deploy.yaml  # 43행 주석에"직접 설정" 적혀있는 부분에 복사한 토큰 값 넣기
 ```
 
 #### 배포
@@ -193,13 +202,13 @@ kubectl apply -f test-SDI-Scheduler.yaml  # sdi-scheduler 확인
 #### 배포
 
 ```bash
-cd ../MALE-Advisor # MALE-Advisor 배포
+cd ../advisor # MALE-Advisor 배포
 kubectl apply -f MALE-Advisor-deploy.yaml
 
 ```
 ```bash
-cd ../MALE-Profiler # MALE-profiler 배포
-kubectl apply -f MALE Profiler-deploy.yaml
+cd ../profiler # MALE-profiler 배포
+kubectl apply -f MALE-Profiler-deploy.yaml
 
 ```
 
@@ -274,8 +283,8 @@ policy-engine로그(로그 확인 방법 하단 기술)
 각 워크로드별 YAML 파일을 참고하여 아래 명령으로 배포합니다:
 
 ```bash
-# Mission 디렉토리 이동
-cd ../Mission
+# Mission 워크로드 디렉토리 이동
+cd ../workloads/mission
 kubectl apply -f fastapi_image_server.yaml
 kubectl apply -f yolo-neck-head.yaml
 kubectl apply -f yolo-backbone-move.yaml
