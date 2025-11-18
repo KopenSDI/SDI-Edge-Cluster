@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ros-teleop-pod-1
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+
+  containers:
+    - name: turtlebot3-teleop-container
+      image: ketidevit2/ros-humble:latest
+      imagePullPolicy: Always   # latest 태그는 항상 최신 이미지 가져오기
+      command: ["/bin/bash", "-c", "tail -f /dev/null"]
+      stdin: true
+      tty: true
+      
+      env:
+        - name: ROS_DOMAIN_ID
+          value: "30"
+        
+        - name: ROS_DISCOVERY_SERVER
+          value: "10.0.0.39:11811"
+        
+        # FastDDS 사용 명시
+        - name: RMW_IMPLEMENTATION
+          value: "rmw_fastrtps_cpp"
+        
+        # 로컬호스트만 사용하지 않음 (네트워크 통신 허용)
+        - name: ROS_LOCALHOST_ONLY
+          value: "0"
+        
+        # 디버깅을 위한 로깅 설정 (선택사항)
+        - name: RCUTILS_LOGGING_USE_STDOUT
+          value: "1"
+        - name: RCUTILS_CONSOLE_OUTPUT_FORMAT
+          value: "[{severity}] [{name}]: {message}"
+
+  restartPolicy: Always

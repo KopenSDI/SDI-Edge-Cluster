@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ros-teleop-pod-1
+spec:
+  hostNetwork: true
+
+  containers:
+  - name: turtlebot3-teleop-container
+    image: ketidevit2/ros-humble:1.0.1
+
+
+    stdin: true
+    tty: true
+
+  restartPolicy: Never

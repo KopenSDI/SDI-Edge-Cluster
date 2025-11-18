@@ -1,0 +1,24 @@
+FROM osrf/ros:humble-desktop
+
+RUN apt-get update && apt-get install -y \
+    terminator \
+    x11-apps \
+    git \
+    python3-colcon-common-extensions \
+    ros-humble-gazebo-* \
+    ros-humble-cartographer \
+    ros-humble-cartographer-ros \
+    ros-humble-navigation2 \
+    ros-humble-nav2-bringup \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root/turtlebot3_ws
+RUN git clone -b humble https://github.com/ROBOTIS-GIT/DynamixelSDK.git src/DynamixelSDK && \
+    git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3_msgs.git src/turtlebot3_msgs && \
+    git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3.git src/turtlebot3 && \
+    /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
+
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
+    echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc && \
+    echo "source /root/turtlebot3_ws/install/setup.bash" >> ~/.bashrc && \
+    echo 'export ROS_DOMAIN_ID=30 #TURTLEBOT3' >> ~/.bashrc
