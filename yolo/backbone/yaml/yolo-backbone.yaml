@@ -1,0 +1,59 @@
+# 참고로 노드셀렉터가 오렌지로 되어있는 yaml 임
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backbone-deployment-orange
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backbone-orange
+  template:
+    metadata:
+      labels:
+        app: backbone-orange
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: turtlebot-burger-3
+      containers:
+      - name: backbone
+        image: ketidevit2/backbone:1.0.6
+        env:
+        - name: BACKBONE_NECK_HEAD_URL
+          value: "http://neck-head-service.default.svc.cluster.local:80/process_neck_head"
+        - name: BACKBONE_FASTAPI_URL
+          value: "http://yolo-image-server-service.default.svc.cluster.local:8000/upload_image"
+        # 보안 설정 (웹캠이 /dev/video0로 접근 가능하도록 privileged 모드 사용)
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: dev-video0
+            mountPath: /dev/video0
+            readOnly: false
+      volumes:
+      - name: dev-video0
+        hostPath:
+          path: /dev/video0
+          type: CharDevice
+
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: backbone-pod
+#   labels:
+#     app: backbone
+# spec:
+#   affinity:
+#     nodeAffinity:
+#       requiredDuringSchedulingIgnoredDuringExecution:
+#         nodeSelectorTerms:
+#         - matchExpressions:
+#           - key: "node-role.kubernetes.io/control-plane"
+#             operator: "DoesNotExist"
+#   containers:
+#   - name: backbone
+#     image: ketidevit2/backbone:1.0.1
+#     env:
+#     - name: QT_QPA_PLATFORM
+#       value: offscreen
+
