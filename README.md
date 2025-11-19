@@ -40,6 +40,11 @@ SDI-Edge-Cluster/
 │       └── yolo-neck-head.yaml
 ├── src/                         # 소스 코드
 │   └── yolo/                    # YOLO 모델 레이어 분할 및 컨테이너화 코드
+│       ├── backbone/            # YOLO Backbone 모델 코드
+│       ├── neck-head-slim/      # YOLO Neck-Head 모델 코드
+│       ├── server/              # YOLO 서버 코드
+│       ├── migration/            # 마이그레이션 관련 코드
+│       └── yolov5/               # YOLOv5 관련 코드
 ├── scripts/                     # 유틸리티 스크립트
 │   └── etri-setup/              # ETRI 환경 설정 스크립트
 │       ├── k3s/                 # K3s 클러스터 설치 스크립트

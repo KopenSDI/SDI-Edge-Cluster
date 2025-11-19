@@ -1,2 +1,4 @@
 # Large binaries not needed in repo
 scripts/etri-setup/k3s/docker_images/
+scripts/etri-setup/k3s/k3s
+scripts/etri-setup/k3s/k3s-airgap-images-*.tar.gz
