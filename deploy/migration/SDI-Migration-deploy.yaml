@@ -1,0 +1,112 @@
+# 1) ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sdi-migration
+  namespace: kube-system
+---
+# 2) ClusterRole (Pods 조회·삭제·생성 권한, Nodes 조회 권한)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sdi-migration
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list", "watch", "delete", "create", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+- apiGroups: [""]
+  resources: ["pods/eviction"]
+  verbs: ["create"]
+---
+# 3) ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sdi-migration
+subjects:
+- kind: ServiceAccount
+  name: sdi-migration
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: sdi-migration
+  apiGroup: rbac.authorization.k8s.io
+---
+# 4) InfluxDB Secret (토큰)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sdi-migration-influx-creds
+  namespace: kube-system
+type: Opaque
+stringData:
+  token: <디비 토큰 값 입력 - README 참고> # 직접 작성
+---
+# 5) InfluxDB 접속 정보 ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-metric-data-cm  
+  namespace: kube-system
+data:
+  INFLUX_URL:  "http://influxdb.tbot-monitoring.svc.cluster.local:8086"
+  INFLUX_ORG:  "keti"
+  INFLUX_BUCKET: "turtlebot"
+  POLICY_ENGINE_URL: "http://policy-engine.orchestration-engines.svc.cluster.local:8080"
+  ANALYSIS_ENGINE_URL: "http://analysis-engine.orchestration-engines.svc.cluster.local:8080"
+  MIGRATION_CHECK_INTERVAL: "30"  # 초 단위
+  RESOURCE_PRESSURE_THRESHOLD: "85"  # CPU 사용률 임계값 (%)
+  ENABLE_CHECKPOINTING: "true"
+---
+# 6) Migration Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdi-migration
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sdi-migration
+  template:
+    metadata:
+      labels:
+        app: sdi-migration
+    spec:
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+
+      serviceAccountName: sdi-migration
+      containers:
+      - name: migration
+        image: ketidevit2/sdi-migration:1.0
+        imagePullPolicy: IfNotPresent
+        
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+
+        env:
+        - name: INFLUX_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: sdi-migration-influx-creds
+              key: token
+
+        envFrom:
+        - configMapRef:
+            name: migration-metric-data-cm        
+        - secretRef:
+            name: sdi-migration-influx-creds
+

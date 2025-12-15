@@ -1,0 +1,32 @@
+# 테스트용 워크로드 - 마이그레이션 테스트에 사용
+# 이 워크로드는 리소스 압박 상황을 시뮬레이션하기 위해 높은 CPU 사용률을 가집니다.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-migration-workload
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-migration
+  template:
+    metadata:
+      labels:
+        app: test-migration
+    spec:
+      containers:
+      - name: stress-test
+        image: polinux/stress
+        command: ["stress"]
+        args: ["--cpu", "2", "--timeout", "300s"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "256Mi"
+          limits:
+            cpu: "2000m"
+            memory: "512Mi"
+      # nodeSelector를 제거하여 어떤 노드에도 스케줄링 가능하도록 설정
+

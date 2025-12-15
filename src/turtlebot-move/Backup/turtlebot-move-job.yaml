@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: turtlebot-move-job
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      containers:
+      - name: move-controller
+        image: ketidevit2/turtlebot-move:latest
+        imagePullPolicy: Always
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "32"
+        - name: ROS_LOCALHOST_ONLY
+          value: "0"
+        - name: RMW_IMPLEMENTATION
+          value: "rmw_fastrtps_cpp"
+          value: "rmw_fastrtps_cpp"
+        - name: ROS_DISCOVERY_SERVER          
+      restartPolicy: Never
+  backoffLimit: 0
+

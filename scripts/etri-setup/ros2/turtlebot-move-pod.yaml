@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: turtlebot-move-pod
+spec:
+  nodeName: turtlebot-burger-3 # 노드네임 바뀌면 이것만 수정하면 됨
+  hostNetwork: true
+  hostPID: true
+  hostIPC: true
+  containers:
+  - name: move-controller
+    image: ubuntu:22.04
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/bash", "-c"]
+    args: 
+    - |
+      # 호스트의 ROS2 환경 설정 (일반적으로 /opt/ros/humble/setup.bash)
+      if [ -f /opt/ros/humble/setup.bash ]; then
+        source /opt/ros/humble/setup.bash
+      elif [ -f /opt/ros/foxy/setup.bash ]; then
+        source /opt/ros/foxy/setup.bash
+      fi
+      # ROS2 bin 경로를 PATH에 추가
+      export PATH="/opt/ros/humble/bin:$PATH"
+      # 라이브러리 경로 설정 (호스트의 ldconfig 설정 사용)
+      export LD_LIBRARY_PATH="/usr/lib/aarch64-linux-gnu/blas:/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/usr/lib:/usr/lib64:$LD_LIBRARY_PATH"
+      # ROS2 환경 변수 설정 (호스트와 동일하게)
+      export ROS_DOMAIN_ID=32
+      export ROS_LOCALHOST_ONLY=0
+      export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      # 호스트의 스크립트 실행
+      /host-script/smooth_move.sh
+    env:
+    - name: ROS_DOMAIN_ID
+      value: "32"
+    - name: ROS_LOCALHOST_ONLY
+      value: "0"
+    - name: RMW_IMPLEMENTATION
+      value: "rmw_fastrtps_cpp"
+    - name: PATH
+      value: "/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    - name: LD_LIBRARY_PATH
+      value: "/usr/lib/aarch64-linux-gnu/blas:/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/usr/lib:/usr/lib64"
+    volumeMounts:
+    - name: host-script
+      mountPath: /host-script
+      readOnly: true
+    - name: ros-install
+      mountPath: /opt/ros
+      readOnly: true
+    - name: host-bin
+      mountPath: /usr/bin
+      readOnly: true
+    - name: host-lib
+      mountPath: /usr/lib
+      readOnly: true
+    - name: host-lib64
+      mountPath: /usr/lib64
+      readOnly: true
+    - name: host-lib-root
+      mountPath: /lib
+      readOnly: true
+    - name: host-etc
+      mountPath: /etc
+      readOnly: true
+    securityContext:
+      privileged: true
+  volumes:
+  - name: host-script
+    hostPath:
+      path: /root/KETI_SDI_Edge_Cluster/SDI_Edge_Cluster/src/turtlebot-move
+      type: Directory
+  - name: ros-install
+    hostPath:
+      path: /opt/ros
+      type: Directory
+  - name: host-bin
+    hostPath:
+      path: /usr/bin
+      type: Directory
+  - name: host-lib
+    hostPath:
+      path: /usr/lib
+      type: Directory
+  - name: host-lib64
+    hostPath:
+      path: /usr/lib64
+      type: DirectoryOrCreate
+  - name: host-lib-root
+    hostPath:
+      path: /lib
+      type: Directory
+  - name: host-etc
+    hostPath:
+      path: /etc
+      type: Directory
+  restartPolicy: Never
