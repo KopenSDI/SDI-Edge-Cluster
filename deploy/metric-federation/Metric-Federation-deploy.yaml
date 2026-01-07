@@ -1,0 +1,135 @@
+# ============================================================
+# Metric Federation Agent - Edge → Central 메트릭 전송
+# ============================================================
+#
+# 이 컴포넌트는 Edge Cluster의 메트릭을 Central Cluster로 전송합니다.
+# - 클러스터 메트릭 (노드 상태, 리소스)
+# - 워크로드 메트릭 (Pod, Deployment)
+# - 디바이스 메트릭 (터틀봇 배터리, 위치)
+#
+# 배포 전 설정:
+# 1. CENTRAL_API_URL: Central Cluster의 Federation Receiver 주소
+# 2. CENTRAL_API_TOKEN: 인증 토큰 (Secret으로 관리)
+# 3. CLUSTER_ID: 이 Edge Cluster의 고유 식별자
+# ============================================================
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: federation-creds
+  namespace: keti-monitoring
+type: Opaque
+stringData:
+  # Central Cluster API 토큰 (Central에서 발급)
+  central-api-token: "temp-token-for-testing"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: federation-agent
+  namespace: keti-monitoring
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: federation-agent-role
+rules:
+  # 클러스터/워크로드 메트릭 수집을 위한 권한
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "services", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: federation-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: federation-agent
+    namespace: keti-monitoring
+roleRef:
+  kind: ClusterRole
+  name: federation-agent-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metric-federation-agent
+  namespace: keti-monitoring
+  labels:
+    app: federation-agent
+    component: metric-federation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: federation-agent
+  template:
+    metadata:
+      labels:
+        app: federation-agent
+        component: metric-federation
+    spec:
+      serviceAccountName: federation-agent
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      containers:
+        - name: federation-agent
+          image: ketidevit2/metric-federation-agent:1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            # Edge Cluster 식별 정보
+            - name: CLUSTER_ID
+              value: "edge-cluster-01"  # 고유 ID로 변경
+            - name: CLUSTER_NAME
+              value: "KETI-Edge-Cluster"
+
+            # Central Cluster 연결 정보
+            - name: CENTRAL_API_URL
+              value: "http://10.0.5.55:30080"  # Central Cluster IP
+            - name: CENTRAL_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: federation-creds
+                  key: central-api-token
+
+            # InfluxDB 연결 정보 (디바이스 메트릭용)
+            - name: INFLUX_URL
+              value: "http://influxdb.tbot-monitoring.svc.cluster.local:8086"
+            - name: INFLUX_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-creds
+                  key: token
+            - name: INFLUX_ORG
+              value: "keti"
+            - name: INFLUX_BUCKET
+              value: "turtlebot"
+
+            # 동기화 설정
+            - name: SYNC_INTERVAL
+              value: "30"  # 30초마다 전송
+            - name: MAX_RETRIES
+              value: "3"
+            - name: RETRY_DELAY
+              value: "5"
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
